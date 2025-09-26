@@ -121,7 +121,6 @@ public class Client implements ActionListener {
         jFrame.setLocation(800, 50);
         jFrame.setUndecorated(true);
         jFrame.getContentPane().setBackground(Color.WHITE);
-        jFrame.setDefaultCloseOperation(3);
 
         jFrame.setVisible(true);
 
@@ -276,7 +275,6 @@ public class Client implements ActionListener {
 
                     SwingUtilities.invokeLater(() -> {
                         jFrame.validate();
-                        // Auto-scroll para a mensagem mais recente
                         JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
                         verticalBar.setValue(verticalBar.getMaximum());
                     });

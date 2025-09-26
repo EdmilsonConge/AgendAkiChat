@@ -74,7 +74,6 @@ public class Server implements ActionListener {
         name.setFont(new Font("SAN_SERIF", Font.BOLD, 18));
         p1.add(name);
 
-        // Status label - agora é uma referência estática para poder ser atualizada
         status = new JLabel("Waiting for connection...");
         status.setBounds(110, 35, 150, 18);
         status.setForeground(Color.LIGHT_GRAY);
@@ -98,7 +97,7 @@ public class Server implements ActionListener {
 
         JButton send = new JButton("Send");
         send.setBounds(320, 655, 123, 40);
-        send.setBackground(new Color(7, 94, 84));
+        send.setBackground(new Color(37, 211, 102));
         send.setForeground(Color.WHITE);
         send.addActionListener(this);
         send.setFont(new Font("SAN_SERIF", Font.PLAIN, 16));
@@ -109,7 +108,6 @@ public class Server implements ActionListener {
         jFrame.setUndecorated(true);
         jFrame.getContentPane().setBackground(Color.WHITE);
 
-        jFrame.setDefaultCloseOperation(3);
         jFrame.setVisible(true);
 
         startConnectionChecker();
@@ -120,16 +118,12 @@ public class Server implements ActionListener {
         connectionChecker.start();
     }
 
-    // Método para verificar o status da conexão
     private void checkConnectionStatus() {
         if (clientSocket == null || clientSocket.isClosed() || !clientSocket.isConnected()) {
             updateStatus("Waiting for connection...", Color.LIGHT_GRAY);
         } else {
-            // Testa se a conexão está realmente ativa
             try {
-                // Tenta enviar um ping para verificar se a conexão está ativa
                 if (dataOutputStream != null) {
-                    // Verifica se o socket ainda está conectado
                     if (clientSocket.isConnected() && !clientSocket.isClosed()) {
                         updateStatus("Active Now", Color.GREEN);
                     } else {
@@ -206,7 +200,7 @@ public class Server implements ActionListener {
         output.setFont(new Font("Tahoma", Font.PLAIN, 16));
         output.setBackground(new Color(220, 220, 220));
         output.setOpaque(true);
-        output.setBorder(new EmptyBorder(15, 15, 15, 50));
+        output.setBorder(new EmptyBorder(5, 10, 5, 20));
 
         panel.add(output);
 
