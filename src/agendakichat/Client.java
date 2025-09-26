@@ -9,6 +9,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -21,17 +22,19 @@ public class Client implements ActionListener {
     JTextField text;
     static JPanel a1;
     static Box vertical = Box.createVerticalBox();
-
     static JFrame jFrame = new JFrame();
-
     static DataOutputStream dataOutputStream;
+    static JLabel status;
+    static Socket socket;
+    static Timer connectionChecker;
+    static JScrollPane scrollPane;
 
     Client() {
 
         jFrame.setLayout(null);
 
         JPanel p1 = new JPanel();
-        p1.setBackground(new Color(7, 94, 84));
+        p1.setBackground(new Color(45, 45, 45));
         p1.setBounds(0, 0, 450, 70);
         p1.setLayout(null);
         jFrame.add(p1);
@@ -45,6 +48,16 @@ public class Client implements ActionListener {
 
         back.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent ae) {
+                if (connectionChecker != null) {
+                    connectionChecker.stop();
+                }
+                try {
+                    if (socket != null && !socket.isClosed()) {
+                        socket.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 System.exit(0);
             }
         });
@@ -56,19 +69,11 @@ public class Client implements ActionListener {
         profile.setBounds(40, 10, 50, 50);
         p1.add(profile);
 
-        ImageIcon i7 = new ImageIcon("resources/videoIcon.png");
-        Image i8 = i7.getImage().getScaledInstance(30, 30, Image.SCALE_DEFAULT);
-        ImageIcon i9 = new ImageIcon(i8);
-        JLabel video = new JLabel(i9);
-        video.setBounds(300, 20, 30, 30);
-        p1.add(video);
-
-        ImageIcon i10 = new ImageIcon("resources/phoneIcon.png");
-        Image i11 = i10.getImage().getScaledInstance(35, 30, Image.SCALE_DEFAULT);
-        ImageIcon i12 = new ImageIcon(i11);
-        JLabel phone = new JLabel(i12);
-        phone.setBounds(360, 20, 35, 30);
-        p1.add(phone);
+        JLabel appName = new JLabel("AgendAki", SwingConstants.CENTER);
+        appName.setBounds(200, 15, 250, 40);
+        appName.setForeground(Color.WHITE);
+        appName.setFont(new Font("SAN_SERIF", Font.BOLD, 22));
+        p1.add(appName);
 
         ImageIcon i13 = new ImageIcon("resources/threeDotsIcon.png");
         Image i14 = i13.getImage().getScaledInstance(10, 25, Image.SCALE_DEFAULT);
@@ -83,15 +88,21 @@ public class Client implements ActionListener {
         name.setFont(new Font("SAN_SERIF", Font.BOLD, 18));
         p1.add(name);
 
-        JLabel status = new JLabel("Active Now");
-        status.setBounds(110, 35, 100, 18);
-        status.setForeground(Color.WHITE);
-        status.setFont(new Font("SAN_SERIF", Font.BOLD, 14));
+        status = new JLabel("Connecting...");
+        status.setBounds(110, 35, 150, 18);
+        status.setForeground(Color.YELLOW);
+        status.setFont(new Font("SAN_SERIF", Font.BOLD, 10));
         p1.add(status);
 
         a1 = new JPanel();
-        a1.setBounds(5, 75, 440, 570);
-        jFrame.add(a1);
+        a1.setLayout(new BoxLayout(a1, BoxLayout.Y_AXIS));
+
+        scrollPane = new JScrollPane(a1);
+        scrollPane.setBounds(5, 75, 440, 570);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        jFrame.add(scrollPane);
 
         text = new JTextField();
         text.setBounds(5, 655, 310, 40);
@@ -100,7 +111,7 @@ public class Client implements ActionListener {
 
         JButton send = new JButton("Send");
         send.setBounds(320, 655, 123, 40);
-        send.setBackground(new Color(7, 94, 84));
+        send.setBackground(new Color(37, 211, 102));
         send.setForeground(Color.WHITE);
         send.addActionListener(this);
         send.setFont(new Font("SAN_SERIF", Font.PLAIN, 16));
@@ -113,11 +124,55 @@ public class Client implements ActionListener {
         jFrame.setDefaultCloseOperation(3);
 
         jFrame.setVisible(true);
+
+        startConnectionChecker();
+    }
+
+    private void startConnectionChecker() {
+        connectionChecker = new Timer(5000, e -> checkConnectionStatus());
+        connectionChecker.start();
+    }
+
+    private void checkConnectionStatus() {
+        if (socket == null || socket.isClosed() || !socket.isConnected()) {
+            updateStatus("Not Active", Color.RED);
+        } else {
+            try {
+                if (socket.isConnected() && !socket.isClosed() && dataOutputStream != null) {
+                    updateStatus("Active Now", Color.GREEN);
+                } else {
+                    updateStatus("Not Active", Color.RED);
+                }
+            } catch (Exception ex) {
+                updateStatus("Not Active", Color.RED);
+            }
+        }
+    }
+
+    private static void updateStatus(String statusText, Color color) {
+        SwingUtilities.invokeLater(() -> {
+            status.setText(statusText);
+            status.setForeground(color);
+        });
     }
 
     public void actionPerformed(ActionEvent ae) {
         try {
             String out = text.getText();
+
+            if (out.trim().isEmpty()) {
+                return;
+            }
+
+
+            if (dataOutputStream == null || socket == null ||
+                    socket.isClosed() || !socket.isConnected()) {
+                JOptionPane.showMessageDialog(jFrame,
+                        "Not connected to server. Cannot send message.",
+                        "Connection Error",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
             JPanel p2 = formatLabel(out);
 
@@ -137,8 +192,19 @@ public class Client implements ActionListener {
             jFrame.repaint();
             jFrame.invalidate();
             jFrame.validate();
+
+            SwingUtilities.invokeLater(() -> {
+                JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+                verticalBar.setValue(verticalBar.getMaximum());
+            });
+
         } catch (Exception e) {
             e.printStackTrace();
+            updateStatus("Not Active", Color.RED);
+            JOptionPane.showMessageDialog(jFrame,
+                    "Failed to send message. Server may be disconnected.",
+                    "Send Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -165,30 +231,92 @@ public class Client implements ActionListener {
         return jPanel;
     }
 
+    private static void attemptReconnection() {
+        new Thread(() -> {
+            int maxAttempts = 5;
+            int attempts = 0;
+
+            while (attempts < maxAttempts) {
+                try {
+                    updateStatus("Reconnecting... (" + (attempts + 1) + "/" + maxAttempts + ")", Color.ORANGE);
+                    Thread.sleep(3000);
+
+                    socket = new Socket("127.0.0.1", 6001);
+                    DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
+                    dataOutputStream = new DataOutputStream(socket.getOutputStream());
+
+                    updateStatus("Active Now", Color.GREEN);
+
+                    startMessageReceiver(dataInputStream);
+                    return;
+
+                } catch (Exception e) {
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        updateStatus("Connection Failed", Color.RED);
+                    }
+                }
+            }
+        }).start();
+    }
+
+
+    private static void startMessageReceiver(DataInputStream dataInputStream) {
+        Thread messageReceiver = new Thread(() -> {
+            try {
+                while (true) {
+                    String msg = dataInputStream.readUTF();
+                    JPanel panel = formatLabel(msg);
+
+                    JPanel left = new JPanel(new BorderLayout());
+                    left.add(panel, BorderLayout.LINE_START);
+                    vertical.add(left);
+                    vertical.add(Box.createVerticalStrut(15));
+                    a1.add(vertical, BorderLayout.PAGE_START);
+
+                    SwingUtilities.invokeLater(() -> {
+                        jFrame.validate();
+                        // Auto-scroll para a mensagem mais recente
+                        JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+                        verticalBar.setValue(verticalBar.getMaximum());
+                    });
+                }
+            } catch (IOException e) {
+                updateStatus("Not Active", Color.RED);
+                System.out.println("Server disconnected: " + e.getMessage());
+
+                attemptReconnection();
+            }
+        });
+        messageReceiver.setDaemon(true);
+        messageReceiver.start();
+    }
+
     public static void main(String[] args) {
         new Client();
 
         try {
-            Socket s = new Socket("127.0.0.1", 6001);
-            DataInputStream din = new DataInputStream(s.getInputStream());
-            dataOutputStream = new DataOutputStream(s.getOutputStream());
+            updateStatus("Connecting...", Color.YELLOW);
+            socket = new Socket("127.0.0.1", 6001);
+            DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
+            dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
-            while(true) {
-                a1.setLayout(new BorderLayout());
-                String msg = din.readUTF();
-                JPanel panel = formatLabel(msg);
+            updateStatus("Active Now", Color.GREEN);
 
-                JPanel left = new JPanel(new BorderLayout());
-                left.add(panel, BorderLayout.LINE_START);
-                vertical.add(left);
+            startMessageReceiver(dataInputStream);
 
-                vertical.add(Box.createVerticalStrut(15));
-                a1.add(vertical, BorderLayout.PAGE_START);
-
-                jFrame.validate();
-            }
         } catch (Exception e) {
             e.printStackTrace();
+            updateStatus("Connection Failed", Color.RED);
+
+            int option = JOptionPane.showConfirmDialog(jFrame,
+                    "Failed to connect to server. Do you want to retry?",
+                    "Connection Error",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (option == JOptionPane.YES_OPTION) {
+                attemptReconnection();
+            }
         }
     }
 }
