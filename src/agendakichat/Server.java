@@ -229,13 +229,12 @@ public class Server implements ActionListener {
             updateStatus("Waiting for connection...", Color.LIGHT_GRAY);
 
             while(true) {
-                clientSocket = serverSocket.accept(); // Armazena a referência do socket
+                clientSocket = serverSocket.accept();
                 updateStatus("Active Now", Color.GREEN);
 
                 DataInputStream dataInputStream = new DataInputStream(clientSocket.getInputStream());
                 dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
 
-                // Thread para lidar com mensagens recebidas
                 Thread messageHandler = new Thread(() -> {
                     try {
                         while(true) {
